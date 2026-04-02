@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ChevronUp, ChevronDown, ArrowRight } from "lucide-react";
-import { alertsData, type Alert } from "@/data/alertsData";
+import { useAlerts } from "@/hooks/useDashboardData";
+import type { LiveAlert } from "@/types/api";
 
 interface AlertBannerProps {
   onNavigate: (view: string) => void;
@@ -9,9 +10,11 @@ interface AlertBannerProps {
 
 export default function AlertBanner({ onNavigate, onSelectAlert }: AlertBannerProps) {
   const [expanded, setExpanded] = useState(true);
+  const { data, isLoading } = useAlerts();
 
-  const actionAlerts = alertsData.filter((a) => a.status === "action_needed");
-  const noActionAlerts = alertsData.filter((a) => a.status === "no_action");
+  const alerts = data?.alerts || [];
+  const actionAlerts = alerts.filter((a) => a.status === "action_needed");
+  const noActionAlerts = alerts.filter((a) => a.status === "no_action");
   const totalUnresolved = actionAlerts.length + noActionAlerts.length;
 
   const displayAlerts = [...actionAlerts.slice(0, 2), ...noActionAlerts.slice(0, 1)];
@@ -20,6 +23,25 @@ export default function AlertBanner({ onNavigate, onSelectAlert }: AlertBannerPr
     action_needed: { dot: "bg-destructive", badge: "bg-status-danger-bg", badgeText: "text-status-danger-text" },
     no_action: { dot: "bg-status-purple", badge: "bg-status-purple-bg", badgeText: "text-status-purple-text" },
   };
+
+  if (isLoading) {
+    return (
+      <div className="mx-4 mt-3 bg-card border border-border rounded-lg p-3">
+        <span className="text-xs text-muted-foreground animate-pulse">Loading alerts...</span>
+      </div>
+    );
+  }
+
+  if (totalUnresolved === 0) {
+    return (
+      <div className="mx-4 mt-3 bg-card border border-border rounded-lg p-3">
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-status-success" />
+          <span className="text-xs font-semibold text-foreground">All clear — no alerts need attention</span>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-4 mt-3 bg-card border border-border rounded-lg overflow-hidden">
@@ -37,9 +59,9 @@ export default function AlertBanner({ onNavigate, onSelectAlert }: AlertBannerPr
         </span>
       </button>
 
-      {expanded && (
+      {expanded && displayAlerts.length > 0 && (
         <div className="grid grid-cols-3 border-t border-border/50">
-          {displayAlerts.map((alert) => {
+          {displayAlerts.map((alert: LiveAlert) => {
             const colors = severityColors[alert.status] || severityColors.no_action;
             return (
               <button

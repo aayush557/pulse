@@ -1,5 +1,6 @@
 import { ChevronRight } from "lucide-react";
-import { merchantHealthData, type MerchantHealth } from "@/data/mlData";
+import { useMerchantHealth } from "@/hooks/useDashboardData";
+import type { MerchantHealthItem } from "@/types/api";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface Props {
@@ -27,11 +28,26 @@ function MiniSparkline({ data, color }: { data: number[]; color: string }) {
 }
 
 export default function MerchantHealthCards({ onFilterMerchant }: Props) {
+  const { data, isLoading } = useMerchantHealth();
+
+  if (isLoading) {
+    return (
+      <div className="px-4 py-3">
+        <h3 className="text-xs font-semibold text-foreground mb-2">Portfolio Health</h3>
+        <span className="text-[10px] text-muted-foreground animate-pulse">Loading merchant health...</span>
+      </div>
+    );
+  }
+
+  const merchants = data?.merchants || [];
+
   // Sort: at_risk first, then monitoring, then healthy
-  const sorted = [...merchantHealthData].sort((a, b) => {
+  const sorted = [...merchants].sort((a, b) => {
     const order = { at_risk: 0, monitoring: 1, healthy: 2 };
     return order[a.healthTier] - order[b.healthTier];
   });
+
+  if (sorted.length === 0) return null;
 
   return (
     <div className="px-4 py-3">
@@ -42,7 +58,7 @@ export default function MerchantHealthCards({ onFilterMerchant }: Props) {
         </div>
       </div>
       <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-thin">
-        {sorted.map((m) => {
+        {sorted.map((m: MerchantHealthItem) => {
           const tier = tierStyles[m.healthTier];
           return (
             <div key={m.id} className="bg-card border border-border rounded-lg p-2.5 min-w-[185px] flex-shrink-0">
