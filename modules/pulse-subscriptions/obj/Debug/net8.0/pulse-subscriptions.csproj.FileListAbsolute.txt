@@ -10,3 +10,4 @@
 /Users/leonelnorat/sources/pulse/modules/pulse-subscriptions/obj/Debug/net8.0/refint/PulseSubscriptions.dll
 /Users/leonelnorat/sources/pulse/modules/pulse-subscriptions/obj/Debug/net8.0/PulseSubscriptions.pdb
 /Users/leonelnorat/sources/pulse/modules/pulse-subscriptions/obj/Debug/net8.0/ref/PulseSubscriptions.dll
+/Users/leonelnorat/sources/pulse/modules/pulse-subscriptions/obj/Debug/net8.0/pulse-subscriptions.sourcelink.json

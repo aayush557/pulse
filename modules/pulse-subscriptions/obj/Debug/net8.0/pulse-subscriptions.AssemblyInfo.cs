@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("PulseSubscriptions")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+4b9207f6424dfc912138a8feee7f03e4e71010e4")]
 [assembly: System.Reflection.AssemblyProductAttribute("PulseSubscriptions")]
 [assembly: System.Reflection.AssemblyTitleAttribute("PulseSubscriptions")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

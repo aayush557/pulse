@@ -138,3 +138,6 @@
 /Users/leonelnorat/sources/pulse/api-core/api/obj/Debug/net8.0/ref/PulseApi.dll
 /Users/leonelnorat/sources/pulse/api-core/api/bin/Debug/net8.0/PulseSignals.dll
 /Users/leonelnorat/sources/pulse/api-core/api/bin/Debug/net8.0/PulseSignals.pdb
+/Users/leonelnorat/sources/pulse/api-core/api/obj/Debug/net8.0/api-netcore.sourcelink.json
+/Users/leonelnorat/sources/pulse/api-core/api/bin/Debug/net8.0/PulseApi.xml
+/Users/leonelnorat/sources/pulse/api-core/api/obj/Debug/net8.0/PulseApi.xml

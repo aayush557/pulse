@@ -10,3 +10,4 @@
 /Users/leonelnorat/sources/pulse/modules/pulse-signals/obj/Debug/net8.0/refint/PulseSignals.dll
 /Users/leonelnorat/sources/pulse/modules/pulse-signals/obj/Debug/net8.0/PulseSignals.pdb
 /Users/leonelnorat/sources/pulse/modules/pulse-signals/obj/Debug/net8.0/ref/PulseSignals.dll
+/Users/leonelnorat/sources/pulse/modules/pulse-signals/obj/Debug/net8.0/pulse-signals.sourcelink.json
