@@ -103,6 +103,7 @@ export default function NotificationFailuresView() {
         [group.id]: { identifier: result.identifier, url: result.url },
       }));
       toast.success(`Created ${result.identifier}`);
+      window.open(result.url, "_blank");
     } catch (err: any) {
       toast.error(err.message || "Failed to create ticket");
     } finally {

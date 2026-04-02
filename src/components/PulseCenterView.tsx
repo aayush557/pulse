@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import { MoreVertical, Eye, Zap, X, Search, Download, ChevronDown, ChevronRight, Sparkles } from "lucide-react";
-import { alertsData, categoryBadgeMap, statusBadgeMap, type Alert, type AlertStatus } from "@/data/alertsData";
+import { categoryBadgeMap, statusBadgeMap, type Alert, type AlertStatus, type AlertCategory } from "@/data/alertsData";
+import type { SignalCategory } from "@/data/mlData";
 import { predictiveAlerts } from "@/data/mlData";
 import AlertDetailPanel from "./AlertDetailPanel";
 import ContactSupportDialog from "./ContactSupportDialog";
@@ -14,39 +15,66 @@ interface PulseCenterViewProps {
 type FilterTab = "all" | "action_needed" | "no_action" | "resolved" | "watch";
 type TimeRange = "7d" | "30d" | "90d";
 
+// Map signal categories to alert categories and labels
+const signalCategoryMap: Record<SignalCategory, { category: AlertCategory; label: string }> = {
+  decline: { category: "decline", label: "Decline rate" },
+  chargeback: { category: "chargeback", label: "Chargeback" },
+  payout: { category: "payout", label: "Payout" },
+  inactivity: { category: "inactivity", label: "Inactivity" },
+  velocity: { category: "velocity", label: "Volume drop" },
+  returns: { category: "returns", label: "ACH returns" },
+};
+
 // Convert predictive alerts into the Alert interface for unified display
-const watchAlerts: Alert[] = predictiveAlerts.map((pa) => ({
-  id: pa.id,
-  title: pa.title,
-  subtitle: pa.subtitle,
-  category: "predictive" as const,
-  categoryLabel: "Predictive signal",
-  merchant: pa.merchant,
-  amount: null,
-  status: "watch" as AlertStatus,
-  statusLabel: "Watch",
-  time: pa.time,
-  timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000),
-  trendData: pa.trendData,
-  projectedData: pa.projectedData,
-  threshold: pa.threshold,
-  metricLabel: pa.metricLabel,
-  details: {
-    description: `${pa.subtitle}'s ${pa.metricLabel.toLowerCase()} is trending upward and may cross the ${pa.threshold}% threshold within 7 days based on current trajectory.`,
-    severity: "warning" as const,
-    actionLabel: "Monitor this merchant",
-    actionType: "view" as const,
-    metadata: {
-      "Current value": `${pa.trendData[pa.trendData.length - 1]}%`,
-      "Threshold": `${pa.threshold}%`,
-      "Trend": "Upward",
-      "Projected breach": "~5-7 days",
+const watchAlerts: Alert[] = predictiveAlerts.map((pa) => {
+  const mapped = signalCategoryMap[pa.signalCategory];
+  const isDecreasing = pa.signalCategory === "velocity" || pa.signalCategory === "inactivity";
+  const currentVal = pa.trendData[pa.trendData.length - 1];
+  const unit = pa.metricLabel.includes("$") ? "$" : "%";
+  const currentDisplay = unit === "$" ? `$${currentVal.toLocaleString()}` : `${currentVal}%`;
+  const thresholdDisplay = unit === "$" ? `$${pa.threshold.toLocaleString()}` : `${pa.threshold}%`;
+
+  return {
+    id: pa.id,
+    title: pa.title,
+    subtitle: pa.subtitle,
+    category: mapped.category,
+    categoryLabel: mapped.label,
+    merchant: pa.merchant,
+    amount: currentDisplay,
+    status: "watch" as AlertStatus,
+    statusLabel: "Watch",
+    time: pa.time,
+    timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000),
+    trendData: pa.trendData,
+    projectedData: pa.projectedData,
+    threshold: pa.threshold,
+    metricLabel: pa.metricLabel,
+    aiDetected: true,
+    signalConfidence: pa.confidence,
+    aiExplanation: isDecreasing
+      ? `${pa.subtitle}'s ${pa.metricLabel.toLowerCase()} is trending downward and may drop below the ${thresholdDisplay} threshold within 7 days.`
+      : `${pa.subtitle}'s ${pa.metricLabel.toLowerCase()} is trending upward and may cross the ${thresholdDisplay} threshold within 7 days.`,
+    details: {
+      description: isDecreasing
+        ? `${pa.subtitle}'s ${pa.metricLabel.toLowerCase()} has been declining steadily and is projected to breach the ${thresholdDisplay} floor within 7 days.`
+        : `${pa.subtitle}'s ${pa.metricLabel.toLowerCase()} is trending upward and may cross the ${thresholdDisplay} threshold within 7 days based on current trajectory.`,
+      severity: pa.confidence === "high" ? "danger" as const : "warning" as const,
+      actionLabel: "Monitor this merchant",
+      actionType: "view" as const,
+      metadata: {
+        "Current value": currentDisplay,
+        "Threshold": thresholdDisplay,
+        "Trend": isDecreasing ? "Downward" : "Upward",
+        "Projected breach": "~5-7 days",
+        "Confidence": pa.confidence === "high" ? "High" : "Medium",
+      },
     },
-  },
-}));
+  };
+});
 
 export default function PulseCenterView({ initialSelectedAlert }: PulseCenterViewProps) {
-  const [alerts, setAlerts] = useState<Alert[]>([...alertsData, ...watchAlerts]);
+  const [alerts, setAlerts] = useState<Alert[]>([...watchAlerts]);
   const [filterTab, setFilterTab] = useState<FilterTab>("all");
   const [timeRange, setTimeRange] = useState<TimeRange>("30d");
   const [selectedAlert, setSelectedAlert] = useState<string | null>(initialSelectedAlert || null);

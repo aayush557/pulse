@@ -133,6 +133,8 @@ export const aiThresholdRecommendations: AiThresholdRec[] = [
   { settingId: "decline_rate", recommendedValue: "15", explanation: "Recommended: 15% based on your portfolio's decline rate distribution" },
 ];
 
+export type SignalCategory = "decline" | "chargeback" | "payout" | "inactivity" | "velocity" | "returns";
+
 export interface PredictiveAlert {
   id: string;
   title: string;
@@ -142,19 +144,25 @@ export interface PredictiveAlert {
   projectedData: number[]; // 7 days forecast
   threshold: number;
   metricLabel: string;
+  signalCategory: SignalCategory;
+  signalLabel: string;
+  confidence: "high" | "medium";
   time: string;
 }
 
 export const predictiveAlerts: PredictiveAlert[] = [
   {
     id: "WATCH-001",
-    title: "Merchant trending toward funding hold",
+    title: "Chargeback rate trending toward funding hold",
     subtitle: "Sunbound Homes",
     merchant: "PPID 2641",
     trendData: [4.2, 4.8, 5.1, 5.5, 6.0, 6.8, 7.2, 7.9, 8.5, 9.1, 9.8, 10.4, 11.2, 12.0],
     projectedData: [12.8, 13.5, 14.2, 14.9, 15.5, 16.1, 16.8],
     threshold: 15,
     metricLabel: "Chargeback rate (%)",
+    signalCategory: "chargeback",
+    signalLabel: "Chargeback",
+    confidence: "high",
     time: "1h ago",
   },
   {
@@ -166,7 +174,122 @@ export const predictiveAlerts: PredictiveAlert[] = [
     projectedData: [14.8, 16.0, 17.2, 18.3, 19.2, 20.0, 20.8],
     threshold: 20,
     metricLabel: "Decline rate (%)",
+    signalCategory: "decline",
+    signalLabel: "Decline rate",
+    confidence: "high",
     time: "4h ago",
+  },
+  {
+    id: "WATCH-003",
+    title: "ACH return rate climbing",
+    subtitle: "Apex Roofing LLC",
+    merchant: "PPID 4821",
+    trendData: [1.1, 1.2, 1.4, 1.5, 1.8, 2.0, 2.3, 2.6, 2.9, 3.2, 3.5, 3.9, 4.3, 4.8],
+    projectedData: [5.3, 5.8, 6.3, 6.8, 7.2, 7.7, 8.1],
+    threshold: 7,
+    metricLabel: "ACH return rate (%)",
+    signalCategory: "returns",
+    signalLabel: "ACH returns",
+    confidence: "high",
+    time: "2h ago",
+  },
+  {
+    id: "WATCH-004",
+    title: "Payout failure rate increasing",
+    subtitle: "QuickFix Plumbing",
+    merchant: "PPID 3291",
+    trendData: [0.5, 0.6, 0.5, 0.8, 1.0, 1.2, 1.5, 1.8, 2.1, 2.5, 2.8, 3.1, 3.5, 3.9],
+    projectedData: [4.3, 4.8, 5.2, 5.6, 6.0, 6.4, 6.8],
+    threshold: 5,
+    metricLabel: "Payout failure rate (%)",
+    signalCategory: "payout",
+    signalLabel: "Payout",
+    confidence: "medium",
+    time: "3h ago",
+  },
+  {
+    id: "WATCH-005",
+    title: "Transaction volume declining rapidly",
+    subtitle: "Castle Management",
+    merchant: "PPID 2890",
+    trendData: [8600, 8400, 8200, 7800, 7500, 7100, 6800, 6400, 6000, 5600, 5200, 4800, 4400, 4000],
+    projectedData: [3600, 3200, 2800, 2400, 2100, 1800, 1500],
+    threshold: 3000,
+    metricLabel: "Daily volume ($)",
+    signalCategory: "velocity",
+    signalLabel: "Volume drop",
+    confidence: "high",
+    time: "5h ago",
+  },
+  {
+    id: "WATCH-006",
+    title: "Decline rate spike — possible card testing",
+    subtitle: "Bright Storage Co",
+    merchant: "PPID 6718",
+    trendData: [4.1, 4.0, 3.9, 4.2, 4.5, 5.8, 8.2, 12.1, 16.5, 19.8, 22.4, 25.1, 27.8, 30.2],
+    projectedData: [32.5, 34.8, 37.0, 39.1, 41.0, 42.8, 44.5],
+    threshold: 25,
+    metricLabel: "Decline rate (%)",
+    signalCategory: "decline",
+    signalLabel: "Decline rate",
+    confidence: "high",
+    time: "30m ago",
+  },
+  {
+    id: "WATCH-007",
+    title: "Chargeback velocity accelerating",
+    subtitle: "Linen Master",
+    merchant: "PPID 1834",
+    trendData: [0.2, 0.2, 0.3, 0.3, 0.4, 0.5, 0.6, 0.7, 0.9, 1.1, 1.3, 1.5, 1.8, 2.1],
+    projectedData: [2.4, 2.8, 3.2, 3.6, 4.0, 4.4, 4.8],
+    threshold: 3.5,
+    metricLabel: "Chargeback rate (%)",
+    signalCategory: "chargeback",
+    signalLabel: "Chargeback",
+    confidence: "medium",
+    time: "6h ago",
+  },
+  {
+    id: "WATCH-008",
+    title: "Merchant approaching inactivity threshold",
+    subtitle: "Bickford Homes",
+    merchant: "PPID 3102",
+    trendData: [6100, 5800, 5300, 4800, 4200, 3600, 3000, 2400, 1800, 1200, 800, 400, 200, 50],
+    projectedData: [20, 5, 0, 0, 0, 0, 0],
+    threshold: 100,
+    metricLabel: "Daily volume ($)",
+    signalCategory: "inactivity",
+    signalLabel: "Inactivity",
+    confidence: "medium",
+    time: "8h ago",
+  },
+  {
+    id: "WATCH-009",
+    title: "ACH return rate elevated — R01 cluster",
+    subtitle: "Affordable Family Home",
+    merchant: "PPID 7204",
+    trendData: [2.0, 2.1, 2.3, 2.5, 2.8, 3.0, 3.3, 3.6, 3.9, 4.2, 4.6, 5.0, 5.4, 5.8],
+    projectedData: [6.2, 6.7, 7.1, 7.5, 7.9, 8.3, 8.7],
+    threshold: 7,
+    metricLabel: "ACH return rate (%)",
+    signalCategory: "returns",
+    signalLabel: "ACH returns",
+    confidence: "medium",
+    time: "12h ago",
+  },
+  {
+    id: "WATCH-010",
+    title: "Payout rejection rate climbing",
+    subtitle: "Iron Storage",
+    merchant: "PPID 4455",
+    trendData: [0.3, 0.4, 0.4, 0.5, 0.6, 0.8, 1.0, 1.2, 1.5, 1.8, 2.1, 2.4, 2.7, 3.0],
+    projectedData: [3.4, 3.8, 4.2, 4.5, 4.9, 5.3, 5.6],
+    threshold: 5,
+    metricLabel: "Payout rejection rate (%)",
+    signalCategory: "payout",
+    signalLabel: "Payout",
+    confidence: "medium",
+    time: "1d ago",
   },
 ];
 

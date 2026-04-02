@@ -1,5 +1,5 @@
 export type AlertStatus = "action_needed" | "no_action" | "resolved" | "dismissed" | "watch";
-export type AlertCategory = "payout" | "credential" | "payin" | "webhook" | "decline" | "inactivity" | "predictive";
+export type AlertCategory = "payout" | "credential" | "payin" | "webhook" | "decline" | "inactivity" | "predictive" | "chargeback" | "returns" | "velocity";
 
 export interface Alert {
   id: string;
@@ -222,6 +222,9 @@ export const categoryBadgeMap: Record<AlertCategory, { bg: string; text: string 
   decline: { bg: "bg-status-danger-bg", text: "text-status-danger-text" },
   inactivity: { bg: "bg-status-info-bg", text: "text-status-info-text" },
   predictive: { bg: "bg-status-watch-bg", text: "text-status-watch-text" },
+  chargeback: { bg: "bg-red-50", text: "text-red-800" },
+  returns: { bg: "bg-orange-50", text: "text-orange-800" },
+  velocity: { bg: "bg-purple-50", text: "text-purple-800" },
 };
 
 export const statusBadgeMap: Record<AlertStatus, { bg: string; text: string; dot: string }> = {
