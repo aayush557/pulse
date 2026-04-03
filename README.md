@@ -1,3 +1,3 @@
-# Welcome to your Lovable project
+Pulse
 
-TODO: Document your project here
+Payabli Pulse is a proactive partner intelligence platform built natively into the Payabli portal. It monitors merchant portfolio activity in real time, translates internal platform events into plain-language alerts, and delivers each one with an inline resolution flow — so partners can act immediately without contacting support. Pulse is a subscription add-on, separate from Payabli's existing webhook and notification infrastructure. Every alert category is opt-in, configurable by threshold and recipient, and backed by a dedicated pulse_ permission layer. On top of the operational alert library, Pulse connects to the PAI team's ML scoring pipeline to surface merchant health signals and predictive anomaly detection — flagging risk patterns before they materialize, not after. An automated SRE ticket engine runs in parallel, converting platform events into fully populated Linear tickets at the moment of detection, eliminating triage entirely. Built at the Miami offsite AI hackathon — April 2026. Three hours, Claude Code, one team.
