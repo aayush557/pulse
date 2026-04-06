@@ -453,7 +453,7 @@ function RetryPayoutStep({ alert, retryBank, setRetryBank }: { alert: Alert; ret
 function RotateTokenStep({ alert, showToken, setShowToken, tokenCopied, onCopy }: {
   alert: Alert; showToken: boolean; setShowToken: (v: boolean) => void; tokenCopied: boolean; onCopy: (t: string) => void;
 }) {
-  const newToken = "pk_live_9x8kF2mNqR7vL4wJ3bHt6pYs";
+  const newToken = "pk_live_EXAMPLE_PLACEHOLDER_TOKEN";
   return (
     <div className="space-y-3 mb-4">
       <div className="bg-status-warning-bg border border-status-warning-border rounded-md p-2.5 text-[11px] text-status-warning-text flex items-start gap-2">
