@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Sparkles, ChevronRight, X } from "lucide-react";
-import { portfolioDigest, type PortfolioInsight } from "@/data/mlData";
+import { usePortfolioDigest } from "@/hooks/useDashboardData";
+import type { PortfolioInsight } from "@/types/api";
 
 const borderColors: Record<string, string> = {
   positive: "border-l-status-success",
@@ -24,6 +25,31 @@ function InsightRow({ insight }: { insight: PortfolioInsight }) {
 
 export default function PortfolioDigest() {
   const [showModal, setShowModal] = useState(false);
+  const { data: digest, isLoading, error } = usePortfolioDigest();
+
+  if (isLoading) {
+    return (
+      <div className="mx-4 mt-3 bg-card border border-border rounded-lg overflow-hidden">
+        <div className="px-3 py-2.5 border-b border-border/50 flex items-center gap-2">
+          <Sparkles className="w-3.5 h-3.5 text-status-purple" />
+          <h3 className="text-xs font-semibold text-foreground">Weekly Intelligence</h3>
+        </div>
+        <div className="px-3 py-6 text-center text-xs text-muted-foreground">Generating weekly insights...</div>
+      </div>
+    );
+  }
+
+  if (error || !digest) {
+    return (
+      <div className="mx-4 mt-3 bg-card border border-border rounded-lg overflow-hidden">
+        <div className="px-3 py-2.5 border-b border-border/50 flex items-center gap-2">
+          <Sparkles className="w-3.5 h-3.5 text-status-purple" />
+          <h3 className="text-xs font-semibold text-foreground">Weekly Intelligence</h3>
+        </div>
+        <div className="px-3 py-6 text-center text-xs text-muted-foreground">Unable to load insights right now.</div>
+      </div>
+    );
+  }
 
   return (
     <>
@@ -32,12 +58,12 @@ export default function PortfolioDigest() {
           <div className="flex items-center gap-2">
             <Sparkles className="w-3.5 h-3.5 text-status-purple" />
             <div>
-              <h3 className="text-xs font-semibold text-foreground">Weekly Intelligence — {portfolioDigest.weekLabel}</h3>
+              <h3 className="text-xs font-semibold text-foreground">Weekly Intelligence — {digest?.weekLabel || "This Week"}</h3>
             </div>
           </div>
         </div>
         <div className="px-3 py-3 space-y-2">
-          {portfolioDigest.insights.map((insight, i) => (
+          {(digest?.insights || []).map((insight, i) => (
             <InsightRow key={i} insight={insight} />
           ))}
         </div>
@@ -59,7 +85,7 @@ export default function PortfolioDigest() {
             <div className="px-4 py-3 border-b border-border/50 flex items-center justify-between sticky top-0 bg-card z-10">
               <div className="flex items-center gap-2">
                 <Sparkles className="w-4 h-4 text-status-purple" />
-                <h3 className="text-sm font-semibold text-foreground">Full Portfolio Analysis — {portfolioDigest.weekLabel}</h3>
+                <h3 className="text-sm font-semibold text-foreground">Full Portfolio Analysis — {digest?.weekLabel || "This Week"}</h3>
               </div>
               <button onClick={() => setShowModal(false)} className="text-muted-foreground hover:text-foreground">
                 <X className="w-4 h-4" />
@@ -67,11 +93,11 @@ export default function PortfolioDigest() {
             </div>
             <div className="px-4 py-4 space-y-2.5">
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2">Key Highlights</div>
-              {portfolioDigest.insights.map((insight, i) => (
+              {(digest?.insights || []).map((insight, i) => (
                 <InsightRow key={i} insight={insight} />
               ))}
               <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-2 mt-4 pt-3 border-t border-border/50">Additional Insights</div>
-              {portfolioDigest.expandedInsights.map((insight, i) => (
+              {(digest?.expandedInsights || []).map((insight, i) => (
                 <InsightRow key={i} insight={insight} />
               ))}
             </div>

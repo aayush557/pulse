@@ -205,3 +205,105 @@ export interface PartnerRiskResponse {
   offset: number;
   partners: PartnerRiskScore[];
 }
+
+// ── Amigo AI Chat ──────────────────────────────────────────────────────
+
+export interface AmigoChatRequest {
+  message: string;
+  history?: Array<{ role: "user" | "assistant"; content: string }>;
+}
+
+export interface AmigoChatResponse {
+  response: string;
+}
+
+// ── Portfolio Digest ───────────────────────────────────────────────────
+
+export interface PortfolioInsight {
+  type: "positive" | "warning" | "info";
+  text: string;
+}
+
+export interface PortfolioDigestResponse {
+  weekLabel: string;
+  insights: PortfolioInsight[];
+  expandedInsights: PortfolioInsight[];
+  fromCache: boolean;
+  generatedAt: string;
+}
+
+// ── Predictive Alerts ──────────────────────────────────────────────────
+
+export interface PredictiveAlertItem {
+  id: string;
+  title: string;
+  subtitle: string;
+  merchant: string;
+  trendData: number[];
+  projectedData: number[];
+  threshold: number;
+  metricLabel: string;
+  time: string;
+  projectedBreachDay: number | null;
+}
+
+export interface PredictiveAlertsResponse {
+  alerts: PredictiveAlertItem[];
+}
+
+// ── Alert Resolutions ─────────────────────────────────────────────────
+
+export interface AlertResolution {
+  alert_id: string;
+  action: "resolved" | "dismissed";
+  created_at: string;
+}
+
+export interface AlertResolutionsResponse {
+  resolutions: AlertResolution[];
+}
+
+// ── Alert Actions ──────────────────────────────────────────────────────
+
+export interface AlertActionRequest {
+  actionType: string;
+  params?: Record<string, any>;
+}
+
+export interface AlertActionResponse {
+  success: boolean;
+  statusCode?: number;
+  responseTime?: number;
+  resolvedAt?: string;
+  dismissedAt?: string;
+  message?: string;
+  requiresIntegration?: boolean;
+  error?: string;
+}
+
+// ── Settings Recommendations ───────────────────────────────────────────
+
+export interface ThresholdRecommendation {
+  settingId: string;
+  recommendedValue: string;
+  explanation: string;
+  dataPoints: {
+    p50: number;
+    p75: number;
+    p90: number;
+  };
+}
+
+export interface SubscriptionsResponse {
+  batch_holds: boolean;
+  payout_failures: boolean;
+  credential_expiry: boolean;
+  webhook_health: boolean;
+  merchant_inactivity: boolean;
+  decline_rate: boolean;
+}
+
+export interface SettingsRecommendationsResponse {
+  recommendations: ThresholdRecommendation[];
+  generatedAt: string;
+}

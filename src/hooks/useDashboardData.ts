@@ -1,5 +1,10 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import type { MetricsSummary, AlertsResponse, MerchantHealthResponse, WebhookAlertsResponse, PartnerRiskResponse, NotificationFailuresResponse, LinearConfigResponse, LinearIssueResponse } from "@/types/api";
+import type {
+  MetricsSummary, AlertsResponse, MerchantHealthResponse, WebhookAlertsResponse,
+  PartnerRiskResponse, NotificationFailuresResponse, LinearConfigResponse, LinearIssueResponse,
+  AmigoChatResponse, PortfolioDigestResponse, PredictiveAlertsResponse,
+  AlertActionResponse, AlertResolutionsResponse, SettingsRecommendationsResponse, SubscriptionsResponse,
+} from "@/types/api";
 
 async function fetchJson<T>(url: string): Promise<T> {
   const res = await fetch(url);
@@ -18,10 +23,10 @@ export function useMetricsSummary() {
   });
 }
 
-export function useAlerts() {
+export function useAlerts(days?: number) {
   return useQuery<AlertsResponse>({
-    queryKey: ["alerts"],
-    queryFn: () => fetchJson<AlertsResponse>("/api/alerts"),
+    queryKey: ["alerts", days ?? 7],
+    queryFn: () => fetchJson<AlertsResponse>(`/api/alerts?days=${days || 7}`),
     refetchInterval: 60_000,
     staleTime: 30_000,
   });
@@ -94,5 +99,133 @@ export function usePartnerRisk(tier?: string) {
     queryFn: () => fetchJson<PartnerRiskResponse>(`/api/partner-risk?${params}`),
     refetchInterval: 120_000,
     staleTime: 60_000,
+  });
+}
+
+// ── Amigo AI Chat ──────────────────────────────────────────────────────
+
+export function useAmigoChat() {
+  return useMutation<AmigoChatResponse, Error, {
+    message: string;
+    history?: Array<{ role: "user" | "assistant"; content: string }>;
+  }>({
+    mutationFn: async (data) => {
+      const res = await fetch("/api/amigo/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: res.statusText }));
+        throw new Error(err.error || "Failed to get response");
+      }
+      return res.json();
+    },
+  });
+}
+
+// ── Portfolio Digest ───────────────────────────────────────────────────
+
+export function usePortfolioDigest() {
+  return useQuery<PortfolioDigestResponse>({
+    queryKey: ["portfolio-digest"],
+    queryFn: () => fetchJson<PortfolioDigestResponse>("/api/portfolio-digest"),
+    staleTime: 30 * 60_000, // 30 min — server caches for 1hr
+    refetchOnWindowFocus: false,
+  });
+}
+
+// ── Predictive Alerts ──────────────────────────────────────────────────
+
+export function usePredictiveAlerts() {
+  return useQuery<PredictiveAlertsResponse>({
+    queryKey: ["alerts", "predictive"],
+    queryFn: () => fetchJson<PredictiveAlertsResponse>("/api/alerts/predictive"),
+    refetchInterval: 5 * 60_000,
+    staleTime: 2 * 60_000,
+  });
+}
+
+// ── Alert Resolutions ─────────────────────────────────────────────────
+
+export function useAlertResolutions() {
+  return useQuery<AlertResolutionsResponse>({
+    queryKey: ["alert-resolutions"],
+    queryFn: () => fetchJson<AlertResolutionsResponse>("/api/alerts/resolutions"),
+    staleTime: 30_000,
+    refetchInterval: 60_000,
+  });
+}
+
+// ── Alert Actions ──────────────────────────────────────────────────────
+
+export function useAlertAction() {
+  return useMutation<AlertActionResponse, Error, {
+    alertId: string;
+    actionType: string;
+    params?: Record<string, any>;
+  }>({
+    mutationFn: async ({ alertId, actionType, params }) => {
+      const res = await fetch(`/api/alerts/${alertId}/action`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ actionType, params }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: res.statusText }));
+        throw new Error(err.error || "Action failed");
+      }
+      return res.json();
+    },
+  });
+}
+
+// ── Resolution Insight (AI-generated) ─────────────────────────────────
+
+export function useResolutionInsight() {
+  return useMutation<{ insight: string }, Error, { alertId: string }>({
+    mutationFn: async ({ alertId }) => {
+      const res = await fetch(`/api/alerts/${alertId}/insight`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      });
+      if (!res.ok) throw new Error("Failed to generate insight");
+      return res.json();
+    },
+  });
+}
+
+// ── Settings Recommendations ───────────────────────────────────────────
+
+export function useSettingsRecommendations() {
+  return useQuery<SettingsRecommendationsResponse>({
+    queryKey: ["settings", "recommendations"],
+    queryFn: () => fetchJson<SettingsRecommendationsResponse>("/api/settings/recommendations"),
+    staleTime: 30 * 60_000,
+    refetchOnWindowFocus: false,
+  });
+}
+
+// ── Subscriptions ─────────────────────────────────────────────────────
+
+export function useSubscriptions() {
+  return useQuery<SubscriptionsResponse>({
+    queryKey: ["subscriptions"],
+    queryFn: () => fetchJson<SubscriptionsResponse>("/api/subscriptions"),
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useUpdateSubscriptions() {
+  return useMutation<SubscriptionsResponse, Error, Record<string, boolean>>({
+    mutationFn: async (data) => {
+      const res = await fetch("/api/subscriptions", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error("Failed to update subscriptions");
+      return res.json();
+    },
   });
 }

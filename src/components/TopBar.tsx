@@ -2,9 +2,11 @@ import { Building2, HelpCircle, Bell } from "lucide-react";
 
 interface TopBarProps {
   breadcrumbs: { label: string; active?: boolean }[];
+  alertCount?: number;
+  onNavigate?: (view: string) => void;
 }
 
-export default function TopBar({ breadcrumbs }: TopBarProps) {
+export default function TopBar({ breadcrumbs, alertCount, onNavigate }: TopBarProps) {
   return (
     <header className="h-11 bg-card border-b border-border rounded-tr-xl flex items-center px-4 gap-2 flex-shrink-0">
       <div className="flex items-center gap-1">
@@ -24,8 +26,16 @@ export default function TopBar({ breadcrumbs }: TopBarProps) {
           <span>Payabli</span>
           <span className="bg-sidebar-accent text-primary text-[9px] px-1.5 py-0.5 rounded font-medium">Organization</span>
         </button>
-        <button className="w-6 h-6 border border-border rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted/50 transition-colors">
+        <button
+          onClick={() => onNavigate?.("intelligence")}
+          className="w-6 h-6 border border-border rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted/50 transition-colors relative"
+        >
           <Bell className="w-3 h-3" />
+          {(alertCount ?? 0) > 0 && (
+            <span className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-destructive text-destructive-foreground text-[8px] font-bold flex items-center justify-center">
+              {alertCount! > 9 ? "9+" : alertCount}
+            </span>
+          )}
         </button>
         <button className="w-6 h-6 border border-border rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted/50 transition-colors">
           <HelpCircle className="w-3 h-3" />

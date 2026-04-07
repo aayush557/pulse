@@ -6,6 +6,7 @@ import {
 } from "lucide-react";
 import { type Alert } from "@/data/alertsData";
 import { resolutionInsights } from "@/data/mlData";
+import { useAlertAction, useResolutionInsight } from "@/hooks/useDashboardData";
 import { toast } from "sonner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { LineChart, Line, XAxis, YAxis, ReferenceLine, ResponsiveContainer, Area, ComposedChart } from "recharts";
@@ -40,6 +41,9 @@ export default function AlertDetailPanel({ alert, onClose, onResolve, onDismiss,
   const [tokenCopied, setTokenCopied] = useState(false);
   const [retryBank, setRetryBank] = useState("same");
   const [testResult, setTestResult] = useState<"idle" | "testing" | "success" | "fail">("idle");
+  const actionMutation = useAlertAction();
+  const insightMutation = useResolutionInsight();
+  const [aiInsight, setAiInsight] = useState<string | null>(null);
 
   useEffect(() => {
     setStep("details");
@@ -47,7 +51,16 @@ export default function AlertDetailPanel({ alert, onClose, onResolve, onDismiss,
     setTokenCopied(false);
     setRetryBank("same");
     setTestResult("idle");
+    setAiInsight(null);
   }, [alert.id]);
+
+  useEffect(() => {
+    if (step === "success") {
+      insightMutation.mutate({ alertId: alert.id }, {
+        onSuccess: (data) => setAiInsight(data.insight),
+      });
+    }
+  }, [step]);
 
   const currentStepIndex = step === "details" ? 0 : step === "action" ? 1 : (step === "processing" || step === "success" || step === "resolved") ? 2 : 0;
 
@@ -55,15 +68,56 @@ export default function AlertDetailPanel({ alert, onClose, onResolve, onDismiss,
 
   const handleExecuteAction = () => {
     setStep("processing");
-    setTimeout(() => {
-      setStep("success");
-      onResolve(alert.id);
-    }, 2000);
+
+    const actionType = alert.details.actionType || "resolve";
+    const params: Record<string, any> = {};
+
+    if (actionType === "endpoint") {
+      params.endpoint = alert.details.metadata?.["Endpoint"] || "";
+    } else if (actionType === "fix") {
+      params.payoutId = alert.details.metadata?.["Payout ID"] || "";
+      params.bankOption = retryBank;
+    }
+
+    actionMutation.mutate(
+      { alertId: alert.id, actionType: actionType === "fix" ? "retry_payout" : actionType === "rotate" ? "rotate_token" : actionType === "endpoint" ? "resolve" : "resolve", params },
+      {
+        onSuccess: (data) => {
+          if (data.requiresIntegration) {
+            // For actions that need Payabli API integration, show a message but still resolve locally
+            toast.info(data.message || "This action requires additional integration.");
+          }
+          setStep("success");
+          onResolve(alert.id);
+        },
+        onError: (err) => {
+          toast.error(`Action failed: ${err.message}`);
+          setStep("action");
+        },
+      }
+    );
   };
 
   const simulateWebhookTest = () => {
     setTestResult("testing");
-    setTimeout(() => setTestResult("success"), 2500);
+    const endpoint = alert.details.metadata?.["Endpoint"] || "";
+
+    actionMutation.mutate(
+      { alertId: alert.id, actionType: "test_webhook", params: { endpoint } },
+      {
+        onSuccess: (data) => {
+          setTestResult(data.success ? "success" : "fail");
+          if (data.success) {
+            toast.success(`Endpoint responding — HTTP ${data.statusCode} (${data.responseTime}ms)`);
+          } else {
+            toast.error(data.error || "Endpoint unreachable");
+          }
+        },
+        onError: () => {
+          setTestResult("fail");
+        },
+      }
+    );
   };
 
   const copyToken = (text: string) => {
@@ -98,7 +152,9 @@ export default function AlertDetailPanel({ alert, onClose, onResolve, onDismiss,
       nextSteps: [],
     };
 
-    const insight = resolutionInsights[alert.details.actionType || "view"];
+    const hardcodedInsight = resolutionInsights[alert.details.actionType || "view"];
+    const insightText = aiInsight || hardcodedInsight?.message || "Pulse will continue monitoring.";
+    const isLoadingInsight = insightMutation.isPending && !aiInsight;
 
     return (
       <div className="bg-card border border-border rounded-lg overflow-hidden animate-slide-in">
@@ -121,16 +177,19 @@ export default function AlertDetailPanel({ alert, onClose, onResolve, onDismiss,
             </div>
           )}
 
-          {/* Resolution Intelligence (Feature 10) */}
-          {insight && (
-            <div className="bg-insight-bg border border-insight-border rounded-md p-3 mb-3 text-left">
-              <div className="flex items-center gap-1.5 mb-1.5">
-                <Lightbulb className="w-3 h-3 text-insight-text" />
-                <span className="text-[10px] font-semibold text-insight-text uppercase tracking-wider">What we learned</span>
-              </div>
-              <div className="text-[11px] text-foreground leading-relaxed">{insight.message}</div>
+          {/* Resolution Intelligence (Feature 10) — AI-generated insight */}
+          <div className="bg-insight-bg border border-insight-border rounded-md p-3 mb-3 text-left">
+            <div className="flex items-center gap-1.5 mb-1.5">
+              <Lightbulb className="w-3 h-3 text-insight-text" />
+              <span className="text-[10px] font-semibold text-insight-text uppercase tracking-wider">What we learned</span>
+              {isLoadingInsight && (
+                <Sparkles className="w-3 h-3 text-insight-text animate-pulse ml-auto" />
+              )}
             </div>
-          )}
+            <div className={`text-[11px] text-foreground leading-relaxed transition-opacity duration-300 ${isLoadingInsight ? "animate-pulse opacity-60" : "opacity-100"}`}>
+              {insightText}
+            </div>
+          </div>
 
           <button onClick={onClose} className="w-full py-2 rounded-md border border-border text-xs font-medium text-foreground hover:bg-muted/50 transition-colors">
             Back to alerts
@@ -453,7 +512,7 @@ function RetryPayoutStep({ alert, retryBank, setRetryBank }: { alert: Alert; ret
 function RotateTokenStep({ alert, showToken, setShowToken, tokenCopied, onCopy }: {
   alert: Alert; showToken: boolean; setShowToken: (v: boolean) => void; tokenCopied: boolean; onCopy: (t: string) => void;
 }) {
-  const newToken = "pk_live_EXAMPLE_PLACEHOLDER_TOKEN";
+  const newToken = "Token will be generated upon confirmation";
   return (
     <div className="space-y-3 mb-4">
       <div className="bg-status-warning-bg border border-status-warning-border rounded-md p-2.5 text-[11px] text-status-warning-text flex items-start gap-2">

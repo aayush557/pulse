@@ -1,7 +1,7 @@
 import MetricCard from "./MetricCard";
 import AlertBanner from "./AlertBanner";
 import MerchantHealthCards from "./MerchantHealthCards";
-import { useMetricsSummary } from "@/hooks/useDashboardData";
+import { useMetricsSummary, useAlerts } from "@/hooks/useDashboardData";
 import type { MetricValue } from "@/types/api";
 
 interface DashboardViewProps {
@@ -51,6 +51,7 @@ function MetricCardFromData({
 
 export default function DashboardView({ onNavigate, onSelectAlert }: DashboardViewProps) {
   const { data, isLoading, error } = useMetricsSummary();
+  const { data: alertsData } = useAlerts();
 
   const periodLabel = data
     ? `${new Date(data.period.start).toLocaleDateString("en-US", { month: "short", day: "2-digit" })} – ${new Date(data.period.end).toLocaleDateString("en-US", { month: "short", day: "2-digit", year: "numeric" })}`
@@ -110,6 +111,24 @@ export default function DashboardView({ onNavigate, onSelectAlert }: DashboardVi
       {/* Alerts */}
       <div className="mt-4">
         <AlertBanner onNavigate={onNavigate} onSelectAlert={onSelectAlert} />
+      </div>
+
+      {/* Quick alert summary */}
+      <div className="mx-4 mt-2 flex items-center justify-between bg-card border border-border rounded-lg px-3 py-2">
+        <div className="flex items-center gap-3">
+          <div className="text-[10px] text-muted-foreground">
+            Active signals: <span className="font-semibold text-foreground">{alertsData?.totalCount ?? 0}</span>
+          </div>
+          <div className="text-[10px] text-muted-foreground">
+            Action needed: <span className="font-semibold text-destructive">{alertsData?.alerts?.filter(a => a.status === "action_needed").length ?? 0}</span>
+          </div>
+        </div>
+        <button
+          onClick={() => onNavigate("pulse")}
+          className="text-[10px] text-primary font-medium hover:underline"
+        >
+          View all signals →
+        </button>
       </div>
 
       {/* Merchant Health */}

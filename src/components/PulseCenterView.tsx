@@ -1,90 +1,113 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { MoreVertical, Eye, Zap, X, Search, Download, ChevronDown, ChevronRight, Sparkles } from "lucide-react";
-import { categoryBadgeMap, statusBadgeMap, type Alert, type AlertStatus, type AlertCategory } from "@/data/alertsData";
-import type { SignalCategory } from "@/data/mlData";
-import { predictiveAlerts } from "@/data/mlData";
+import { toast } from "sonner";
+import { categoryBadgeMap, statusBadgeMap, type Alert, type AlertStatus } from "@/data/alertsData";
+import { useAlerts, usePredictiveAlerts, useAlertResolutions } from "@/hooks/useDashboardData";
+import type { LiveAlert, PredictiveAlertItem } from "@/types/api";
 import AlertDetailPanel from "./AlertDetailPanel";
 import ContactSupportDialog from "./ContactSupportDialog";
 import MerchantHealthCards from "./MerchantHealthCards";
-import AmigoPanel from "./AmigoPanel";
 
 interface PulseCenterViewProps {
   initialSelectedAlert?: string | null;
+  onNavigate?: (view: string) => void;
 }
 
 type FilterTab = "all" | "action_needed" | "no_action" | "resolved" | "watch";
 type TimeRange = "7d" | "30d" | "90d";
 
-// Map signal categories to alert categories and labels
-const signalCategoryMap: Record<SignalCategory, { category: AlertCategory; label: string }> = {
-  decline: { category: "decline", label: "Decline rate" },
-  chargeback: { category: "chargeback", label: "Chargeback" },
-  payout: { category: "payout", label: "Payout" },
-  inactivity: { category: "inactivity", label: "Inactivity" },
-  velocity: { category: "velocity", label: "Volume drop" },
-  returns: { category: "returns", label: "ACH returns" },
-};
+const timeRangeDays: Record<TimeRange, number> = { "7d": 7, "30d": 30, "90d": 90 };
 
-// Convert predictive alerts into the Alert interface for unified display
-const watchAlerts: Alert[] = predictiveAlerts.map((pa) => {
-  const mapped = signalCategoryMap[pa.signalCategory];
-  const isDecreasing = pa.signalCategory === "velocity" || pa.signalCategory === "inactivity";
-  const currentVal = pa.trendData[pa.trendData.length - 1];
-  const unit = pa.metricLabel.includes("$") ? "$" : "%";
-  const currentDisplay = unit === "$" ? `$${currentVal.toLocaleString()}` : `${currentVal}%`;
-  const thresholdDisplay = unit === "$" ? `$${pa.threshold.toLocaleString()}` : `${pa.threshold}%`;
+export default function PulseCenterView({ initialSelectedAlert, onNavigate }: PulseCenterViewProps) {
+  const [timeRange, setTimeRange] = useState<TimeRange>("30d");
+  const { data: alertsData, isLoading: alertsLoading } = useAlerts(timeRangeDays[timeRange]);
+  const { data: predictiveData } = usePredictiveAlerts();
+  const { data: resolutionsData } = useAlertResolutions();
 
-  return {
+  // Convert API alerts to local Alert shape
+  const liveAlerts: Alert[] = (alertsData?.alerts || []).map((a: LiveAlert) => ({
+    id: a.id,
+    title: a.title,
+    subtitle: a.subtitle,
+    category: a.category as any,
+    categoryLabel: a.categoryLabel,
+    merchant: a.merchant,
+    amount: a.amount,
+    status: a.status,
+    statusLabel: a.statusLabel,
+    time: a.time,
+    timestamp: new Date(a.timestamp),
+    aiDetected: a.aiDetected,
+    aiExplanation: a.aiExplanation,
+    signalConfidence: a.signalConfidence,
+    details: a.details as any,
+  }));
+
+  // Convert predictive alerts from the new endpoint
+  const watchAlerts: Alert[] = (predictiveData?.alerts || []).map((pa: PredictiveAlertItem) => ({
     id: pa.id,
     title: pa.title,
     subtitle: pa.subtitle,
-    category: mapped.category,
-    categoryLabel: mapped.label,
+    category: "predictive" as const,
+    categoryLabel: "Predictive signal",
     merchant: pa.merchant,
-    amount: currentDisplay,
+    amount: null,
     status: "watch" as AlertStatus,
     statusLabel: "Watch",
     time: pa.time,
-    timestamp: new Date(Date.now() - 1 * 60 * 60 * 1000),
+    timestamp: new Date(),
     trendData: pa.trendData,
     projectedData: pa.projectedData,
     threshold: pa.threshold,
     metricLabel: pa.metricLabel,
-    aiDetected: true,
-    signalConfidence: pa.confidence,
-    aiExplanation: isDecreasing
-      ? `${pa.subtitle}'s ${pa.metricLabel.toLowerCase()} is trending downward and may drop below the ${thresholdDisplay} threshold within 7 days.`
-      : `${pa.subtitle}'s ${pa.metricLabel.toLowerCase()} is trending upward and may cross the ${thresholdDisplay} threshold within 7 days.`,
     details: {
-      description: isDecreasing
-        ? `${pa.subtitle}'s ${pa.metricLabel.toLowerCase()} has been declining steadily and is projected to breach the ${thresholdDisplay} floor within 7 days.`
-        : `${pa.subtitle}'s ${pa.metricLabel.toLowerCase()} is trending upward and may cross the ${thresholdDisplay} threshold within 7 days based on current trajectory.`,
-      severity: pa.confidence === "high" ? "danger" as const : "warning" as const,
+      description: `${pa.subtitle}'s ${pa.metricLabel.toLowerCase()} is trending upward and may cross the ${pa.threshold}% threshold within 7 days.`,
+      severity: "warning" as const,
       actionLabel: "Monitor this merchant",
       actionType: "view" as const,
       metadata: {
-        "Current value": currentDisplay,
-        "Threshold": thresholdDisplay,
-        "Trend": isDecreasing ? "Downward" : "Upward",
-        "Projected breach": "~5-7 days",
-        "Confidence": pa.confidence === "high" ? "High" : "Medium",
+        "Current value": `${pa.trendData[pa.trendData.length - 1]}%`,
+        "Threshold": `${pa.threshold}%`,
+        "Trend": "Upward",
+        "Projected breach": pa.projectedBreachDay ? `~${pa.projectedBreachDay} days` : "N/A",
       },
     },
-  };
-});
+  }));
 
-export default function PulseCenterView({ initialSelectedAlert }: PulseCenterViewProps) {
-  const [alerts, setAlerts] = useState<Alert[]>([...watchAlerts]);
+  const [alerts, setAlerts] = useState<Alert[]>([]);
   const [filterTab, setFilterTab] = useState<FilterTab>("all");
-  const [timeRange, setTimeRange] = useState<TimeRange>("30d");
   const [selectedAlert, setSelectedAlert] = useState<string | null>(initialSelectedAlert || null);
   const [openDropdown, setOpenDropdown] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [showContactSupport, setShowContactSupport] = useState(false);
-  const [showAmigo, setShowAmigo] = useState(false);
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
   const [merchantFilter, setMerchantFilter] = useState<string | null>(null);
+  const [focusedIndex, setFocusedIndex] = useState<number>(-1);
+  const [showShortcuts, setShowShortcuts] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (liveAlerts.length > 0 || watchAlerts.length > 0) {
+      const combined = [...liveAlerts, ...watchAlerts];
+
+      // Merge persisted resolutions so resolved/dismissed alerts stay that way across reloads
+      const resMap = new Map(
+        (resolutionsData?.resolutions || []).map((r) => [r.alert_id, r.action])
+      );
+      const merged = combined.map((a) => {
+        const persisted = resMap.get(a.id);
+        if (persisted === "resolved") {
+          return { ...a, status: "resolved" as AlertStatus, statusLabel: "Resolved" };
+        }
+        if (persisted === "dismissed") {
+          return { ...a, status: "dismissed" as AlertStatus, statusLabel: "Dismissed" };
+        }
+        return a;
+      });
+
+      setAlerts(merged);
+    }
+  }, [alertsData, predictiveData, resolutionsData]);
 
   useEffect(() => {
     if (initialSelectedAlert) setSelectedAlert(initialSelectedAlert);
@@ -130,6 +153,58 @@ export default function PulseCenterView({ initialSelectedAlert }: PulseCenterVie
       const order: Record<string, number> = { action_needed: 0, watch: 1, no_action: 2, resolved: 3 };
       return (order[a.status] ?? 4) - (order[b.status] ?? 4);
     });
+
+  const alertIds = filteredAlerts.map(a => a.id);
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Skip if user is typing in an input
+      const target = e.target as HTMLElement;
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) return;
+
+      switch (e.key) {
+        case "ArrowDown":
+        case "j": {
+          e.preventDefault();
+          setFocusedIndex(prev => {
+            const next = Math.min(prev + 1, alertIds.length - 1);
+            setSelectedAlert(alertIds[next] || null);
+            return next;
+          });
+          break;
+        }
+        case "ArrowUp":
+        case "k": {
+          e.preventDefault();
+          setFocusedIndex(prev => {
+            const next = Math.max(prev - 1, 0);
+            setSelectedAlert(alertIds[next] || null);
+            return next;
+          });
+          break;
+        }
+        case "Enter": {
+          if (focusedIndex >= 0 && alertIds[focusedIndex]) {
+            setSelectedAlert(alertIds[focusedIndex]);
+          }
+          break;
+        }
+        case "Escape": {
+          setSelectedAlert(null);
+          setFocusedIndex(-1);
+          break;
+        }
+        case "?": {
+          e.preventDefault();
+          setShowShortcuts(prev => !prev);
+          break;
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [alertIds, focusedIndex]);
 
   // Smart grouping: group by merchant subtitle if 3+ alerts
   const merchantAlertCounts: Record<string, Alert[]> = {};
@@ -183,6 +258,49 @@ export default function PulseCenterView({ initialSelectedAlert }: PulseCenterVie
     });
   };
 
+  const exportAlerts = useCallback(() => {
+    if (filteredAlerts.length === 0) {
+      toast("No alerts to export");
+      return;
+    }
+
+    const escapeCsv = (value: string | null | undefined): string => {
+      if (value == null) return "";
+      const str = String(value);
+      if (str.includes(",") || str.includes('"') || str.includes("\n")) {
+        return `"${str.replace(/"/g, '""')}"`;
+      }
+      return str;
+    };
+
+    const header = ["ID", "Title", "Subtitle", "Category", "Merchant", "Amount", "Status", "Time"];
+    const rows = filteredAlerts.map((a) => [
+      escapeCsv(a.id),
+      escapeCsv(a.title),
+      escapeCsv(a.subtitle),
+      escapeCsv(a.categoryLabel),
+      escapeCsv(a.merchant),
+      escapeCsv(a.amount),
+      escapeCsv(a.statusLabel),
+      escapeCsv(a.time),
+    ].join(","));
+
+    const csv = [header.join(","), ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+
+    const date = new Date().toISOString().slice(0, 10);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `pulse-alerts-${date}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    toast(`Exported ${filteredAlerts.length} alerts`);
+  }, [filteredAlerts]);
+
   return (
     <div>
       {/* Header */}
@@ -193,13 +311,16 @@ export default function PulseCenterView({ initialSelectedAlert }: PulseCenterVie
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setShowAmigo(!showAmigo)}
+            onClick={() => onNavigate?.("intelligence")}
             className="flex items-center gap-1.5 border border-ai-border bg-ai-bg rounded-md px-2.5 py-1.5 text-[11px] text-ai-text font-medium hover:bg-ai-bg/80 transition-colors"
           >
             <Sparkles className="w-3 h-3" />
             Ask Amigo
           </button>
-          <button className="flex items-center gap-1.5 border border-border rounded-md px-2.5 py-1.5 text-[11px] text-foreground hover:bg-muted/50 transition-colors">
+          <button
+            onClick={exportAlerts}
+            className="flex items-center gap-1.5 border border-border rounded-md px-2.5 py-1.5 text-[11px] text-foreground hover:bg-muted/50 transition-colors"
+          >
             <Download className="w-3 h-3" />
             Export
           </button>
@@ -257,6 +378,13 @@ export default function PulseCenterView({ initialSelectedAlert }: PulseCenterVie
               </button>
             ))}
           </div>
+          <button
+            onClick={() => setShowShortcuts(true)}
+            className="w-6 h-6 rounded border border-border flex items-center justify-center text-muted-foreground hover:bg-muted/50 text-[10px] font-mono"
+            title="Keyboard shortcuts"
+          >
+            ?
+          </button>
         </div>
       </div>
 
@@ -287,7 +415,7 @@ export default function PulseCenterView({ initialSelectedAlert }: PulseCenterVie
       </div>
 
       {/* Main content: table + detail/amigo panel */}
-      <div className={`px-4 pb-4 ${(selectedAlertData || showAmigo) ? "grid grid-cols-[1fr_370px] gap-3 items-start" : ""}`}>
+      <div className={`px-4 pb-4 ${selectedAlertData ? "grid grid-cols-[1fr_370px] gap-3 items-start" : ""}`}>
         {/* Table */}
         <div>
           <div className="grid grid-cols-[28px_1fr_100px_80px_70px_120px_50px_36px] gap-0 px-3 pb-1.5 border-b border-border mb-0">
@@ -297,7 +425,9 @@ export default function PulseCenterView({ initialSelectedAlert }: PulseCenterVie
           </div>
 
           <div className="bg-card border border-border rounded-lg overflow-visible">
-            {displayRows.length === 0 ? (
+            {alertsLoading ? (
+              <div className="py-8 text-center text-muted-foreground text-xs">Loading signals...</div>
+            ) : displayRows.length === 0 ? (
               <div className="py-8 text-center text-muted-foreground text-xs">No signals match this filter</div>
             ) : (
               displayRows.map((row) => {
@@ -343,8 +473,9 @@ export default function PulseCenterView({ initialSelectedAlert }: PulseCenterVie
                           key={alert.id}
                           alert={alert}
                           isSelected={selectedAlert === alert.id}
+                          isFocused={focusedIndex >= 0 && alertIds[focusedIndex] === alert.id}
                           isIndented
-                          onSelect={() => { setSelectedAlert(alert.id); setShowAmigo(false); }}
+                          onSelect={() => { setSelectedAlert(alert.id); }}
                           openDropdown={openDropdown}
                           setOpenDropdown={setOpenDropdown}
                           onDismiss={handleDismiss}
@@ -359,7 +490,8 @@ export default function PulseCenterView({ initialSelectedAlert }: PulseCenterVie
                     key={row.alert.id}
                     alert={row.alert}
                     isSelected={selectedAlert === row.alert.id}
-                    onSelect={() => { setSelectedAlert(row.alert.id); setShowAmigo(false); }}
+                    isFocused={focusedIndex >= 0 && alertIds[focusedIndex] === row.alert.id}
+                    onSelect={() => { setSelectedAlert(row.alert.id); }}
                     openDropdown={openDropdown}
                     setOpenDropdown={setOpenDropdown}
                     onDismiss={handleDismiss}
@@ -372,11 +504,6 @@ export default function PulseCenterView({ initialSelectedAlert }: PulseCenterVie
         </div>
 
         {/* Right panel */}
-        {showAmigo && !selectedAlertData && (
-          <div className="sticky top-4">
-            <AmigoPanel onClose={() => setShowAmigo(false)} />
-          </div>
-        )}
         {selectedAlertData && (
           <div className="sticky top-4">
             <AlertDetailPanel
@@ -396,16 +523,45 @@ export default function PulseCenterView({ initialSelectedAlert }: PulseCenterVie
           onClose={() => setShowContactSupport(false)}
         />
       )}
+
+      {/* Keyboard shortcuts overlay */}
+      {showShortcuts && (
+        <div className="fixed inset-0 bg-foreground/30 z-50 flex items-center justify-center" onClick={() => setShowShortcuts(false)}>
+          <div className="bg-card border border-border rounded-lg w-[320px] shadow-lg" onClick={e => e.stopPropagation()}>
+            <div className="px-4 py-3 border-b border-border/50 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-foreground">Keyboard Shortcuts</h3>
+              <button onClick={() => setShowShortcuts(false)} className="text-muted-foreground hover:text-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            <div className="px-4 py-3 space-y-2">
+              {[
+                ["↓ / j", "Next signal"],
+                ["↑ / k", "Previous signal"],
+                ["Enter", "Open signal details"],
+                ["Esc", "Close detail panel"],
+                ["?", "Toggle this help"],
+              ].map(([key, desc]) => (
+                <div key={key} className="flex items-center justify-between">
+                  <span className="text-[11px] text-muted-foreground">{desc}</span>
+                  <kbd className="text-[10px] px-1.5 py-0.5 rounded border border-border bg-muted font-mono">{key}</kbd>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 // ── Single alert row component ──
 function AlertRow({
-  alert, isSelected, isIndented, onSelect, openDropdown, setOpenDropdown, onDismiss, dropdownRef,
+  alert, isSelected, isFocused, isIndented, onSelect, openDropdown, setOpenDropdown, onDismiss, dropdownRef,
 }: {
   alert: Alert;
   isSelected: boolean;
+  isFocused?: boolean;
   isIndented?: boolean;
   onSelect: () => void;
   openDropdown: string | null;
@@ -419,7 +575,7 @@ function AlertRow({
   return (
     <div
       onClick={onSelect}
-      className={`grid grid-cols-[28px_1fr_100px_80px_70px_120px_50px_36px] gap-0 px-3 py-2.5 items-center border-b border-border/30 last:border-b-0 cursor-pointer transition-colors hover:bg-muted/30 ${isSelected ? "bg-sidebar-accent" : ""} ${alert.status === "resolved" ? "opacity-70" : ""} ${isIndented ? "pl-8" : ""} ${alert.status === "watch" ? "border-l-2 border-l-status-watch" : ""}`}
+      className={`grid grid-cols-[28px_1fr_100px_80px_70px_120px_50px_36px] gap-0 px-3 py-2.5 items-center border-b border-border/30 last:border-b-0 cursor-pointer transition-colors hover:bg-muted/30 ${isSelected ? "bg-sidebar-accent" : ""} ${alert.status === "resolved" ? "opacity-70" : ""} ${isIndented ? "pl-8" : ""} ${alert.status === "watch" ? "border-l-2 border-l-status-watch" : ""} ${isFocused ? "ring-1 ring-primary/30" : ""}`}
     >
       <div className="px-1">
         <input type="checkbox" className="w-3.5 h-3.5 rounded border-border" onClick={(e) => e.stopPropagation()} />

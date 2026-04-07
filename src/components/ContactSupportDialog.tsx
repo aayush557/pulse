@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { X, Send, Phone, Mail } from "lucide-react";
+import { X, Send, Phone, Mail, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
 
 interface ContactSupportDialogProps {
@@ -9,10 +9,31 @@ interface ContactSupportDialogProps {
 
 export default function ContactSupportDialog({ alertId, onClose }: ContactSupportDialogProps) {
   const [message, setMessage] = useState(alertId ? `Regarding alert ${alertId}: ` : "");
-  const [method, setMethod] = useState<"email" | "phone">("email");
+  const [subject, setSubject] = useState(alertId ? `Issue with alert ${alertId}` : "");
+  const [method, setMethod] = useState<"email" | "phone" | "slack">("email");
 
-  const handleSubmit = () => {
-    toast.success("Support request submitted. A team member will reach out within 2 hours.");
+  const handleSubmit = async () => {
+    if (method === "slack") {
+      try {
+        const res = await fetch("/api/slack/support", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ alertId, subject, message, method }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          toast.success("Support request sent to Slack");
+          onClose();
+        } else {
+          toast.error(data.error || "Failed to send");
+        }
+      } catch {
+        toast.error("Failed to send support request");
+      }
+      return;
+    }
+    // Keep existing email/phone toast behavior
+    toast.success(method === "email" ? "Support message sent" : "Callback requested");
     onClose();
   };
 
@@ -39,6 +60,12 @@ export default function ContactSupportDialog({ alertId, onClose }: ContactSuppor
             >
               <Phone className="w-3 h-3" /> Request callback
             </button>
+            <button
+              onClick={() => setMethod("slack")}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-md text-xs font-medium transition-colors ${method === "slack" ? "bg-foreground text-background" : "border border-border text-foreground hover:bg-muted/50"}`}
+            >
+              <MessageSquare className="w-3 h-3" /> Slack
+            </button>
           </div>
 
           {alertId && (
@@ -50,7 +77,7 @@ export default function ContactSupportDialog({ alertId, onClose }: ContactSuppor
 
           <div className="mb-3">
             <label className="text-[11px] font-medium text-foreground mb-1 block">Subject</label>
-            <input className="w-full border border-border rounded-md px-3 py-2 text-xs text-foreground bg-card outline-none focus:border-ring" defaultValue={alertId ? `Issue with alert ${alertId}` : ""} />
+            <input className="w-full border border-border rounded-md px-3 py-2 text-xs text-foreground bg-card outline-none focus:border-ring" value={subject} onChange={(e) => setSubject(e.target.value)} />
           </div>
 
           <div className="mb-3">
@@ -76,7 +103,9 @@ export default function ContactSupportDialog({ alertId, onClose }: ContactSuppor
           <div className="bg-status-info-bg border border-status-info-border rounded-md p-2.5 text-[11px] text-status-info-text mb-4">
             {method === "email"
               ? "Our support team typically responds within 2 hours during business hours (9 AM – 6 PM ET)."
-              : "A support engineer will call you back within 30 minutes during business hours."}
+              : method === "phone"
+              ? "A support engineer will call you back within 30 minutes during business hours."
+              : "Your message will be posted to the Pulse support Slack channel. A team member will respond shortly."}
           </div>
 
           <button
@@ -84,7 +113,7 @@ export default function ContactSupportDialog({ alertId, onClose }: ContactSuppor
             className="w-full flex items-center justify-center gap-1.5 py-2.5 rounded-md bg-foreground text-background text-xs font-semibold hover:opacity-90 transition-opacity"
           >
             <Send className="w-3 h-3" />
-            {method === "email" ? "Send message" : "Request callback"}
+            {method === "email" ? "Send message" : method === "phone" ? "Request callback" : "Send to Slack"}
           </button>
         </div>
       </div>

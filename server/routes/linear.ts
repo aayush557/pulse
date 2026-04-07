@@ -55,19 +55,11 @@ linearRouter.post("/issues", async (req, res) => {
   };
 
   try {
-    // Find the Draft (or Backlog) state to create as draft
-    const team = await client.team(teamId);
-    const states = await team.states();
-    const draftState = states.nodes.find((s) => s.name.toLowerCase() === "draft")
-      || states.nodes.find((s) => s.name.toLowerCase() === "triage")
-      || states.nodes.find((s) => s.type === "backlog");
-
     const issue = await client.createIssue({
       teamId,
       title,
       description: body || "",
       priority: priorityMap[priority] ?? 3,
-      ...(draftState ? { stateId: draftState.id } : {}),
     });
 
     const created = await issue.issue;

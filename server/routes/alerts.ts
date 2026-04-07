@@ -3,9 +3,27 @@ import { pool } from "../db.js";
 
 export const alertsRouter = Router();
 
-alertsRouter.get("/", async (_req, res) => {
+alertsRouter.get("/resolutions", async (_req, res) => {
   try {
-    // Failed payouts (ACH returns in the last 7 days)
+    const result = await pool.query(`
+      SELECT DISTINCT ON (alert_id) alert_id, action, created_at
+      FROM pulse.alert_resolutions
+      ORDER BY alert_id, created_at DESC
+    `);
+    res.json({ resolutions: result.rows });
+  } catch (err: any) {
+    // Table may not exist yet
+    res.json({ resolutions: [] });
+  }
+});
+
+alertsRouter.get("/", async (req, res) => {
+  try {
+    // Validate days parameter (whitelist: 7, 30, 90)
+    const rawDays = parseInt(req.query.days as string, 10);
+    const days = [7, 30, 90].includes(rawDays) ? rawDays : 7;
+
+    // Failed payouts (ACH returns in the lookback window)
     const failedPayoutsQuery = `
       SELECT
         r.id_return AS id,
@@ -21,7 +39,7 @@ alertsRouter.get("/", async (_req, res) => {
         r.created_at
       FROM dbo.payabli_returns r
       JOIN dbo.payabli_paypoints pp ON pp.id_paypoint = r.paypoint_id
-      WHERE r.created_at >= CURRENT_DATE - INTERVAL '7 days'
+      WHERE r.created_at >= CURRENT_DATE - INTERVAL '${days} days'
       ORDER BY r.created_at DESC
       LIMIT 10
     `;
@@ -42,7 +60,7 @@ alertsRouter.get("/", async (_req, res) => {
         cb.created_at
       FROM dbo.payabli_chargebacks cb
       JOIN dbo.payabli_paypoints pp ON pp.id_paypoint = cb.paypoint_id
-      WHERE cb.created_at >= CURRENT_DATE - INTERVAL '7 days'
+      WHERE cb.created_at >= CURRENT_DATE - INTERVAL '${days} days'
       ORDER BY cb.created_at DESC
       LIMIT 10
     `;
@@ -60,7 +78,7 @@ alertsRouter.get("/", async (_req, res) => {
         ) AS decline_rate
       FROM dbo.payabli_transactions t
       JOIN dbo.payabli_paypoints pp ON pp.id_paypoint = t.paypointid
-      WHERE t.transactiontime >= CURRENT_DATE - INTERVAL '7 days'
+      WHERE t.transactiontime >= CURRENT_DATE - INTERVAL '${days} days'
         AND t.org_id <> 2
         AND t.method = 'card'
       GROUP BY pp.id_paypoint, pp.dba_name, pp.legal_name
@@ -217,6 +235,20 @@ alertsRouter.get("/", async (_req, res) => {
           },
         },
       });
+    }
+
+    // Filter out resolved/dismissed alerts if requested
+    if (req.query.exclude_resolved === "true") {
+      try {
+        const resResult = await pool.query(
+          `SELECT DISTINCT alert_id FROM pulse.alert_resolutions`
+        );
+        const resolvedIds = new Set(resResult.rows.map((r: any) => r.alert_id));
+        const filtered = alerts.filter((a: any) => !resolvedIds.has(a.id));
+        return res.json({ alerts: filtered, totalCount: filtered.length });
+      } catch {
+        // Table may not exist, continue with unfiltered
+      }
     }
 
     // Sort by timestamp descending

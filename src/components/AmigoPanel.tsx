@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { X, Send, Sparkles } from "lucide-react";
-import { amigoSuggestions, amigoSampleResponses } from "@/data/mlData";
+import { useAmigoChat } from "@/hooks/useDashboardData";
 
 interface Props {
   onClose: () => void;
@@ -16,6 +16,14 @@ export default function AmigoPanel({ onClose }: Props) {
   const [input, setInput] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+  const chatMutation = useAmigoChat();
+
+  const suggestions = [
+    "Which of my merchants had the highest decline rate this week?",
+    "How is my portfolio performing vs. last month?",
+    "Which alerts have been open longest?",
+    "What's my total payout volume this month?",
+  ];
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -23,18 +31,30 @@ export default function AmigoPanel({ onClose }: Props) {
 
   const handleSend = (text?: string) => {
     const msg = text || input.trim();
-    if (!msg) return;
+    if (!msg || chatMutation.isPending) return;
     setInput("");
     setMessages((prev) => [...prev, { role: "user", content: msg }]);
     setIsTyping(true);
 
-    const response = amigoSampleResponses[msg] ||
-      `Based on your portfolio data, I can see that this relates to your current merchant activity. For a detailed breakdown, I'd recommend checking the Pulse Center alerts or the specific merchant's profile. Is there anything more specific you'd like to know?`;
-
-    setTimeout(() => {
-      setMessages((prev) => [...prev, { role: "assistant", content: response }]);
-      setIsTyping(false);
-    }, 1200);
+    chatMutation.mutate(
+      {
+        message: msg,
+        history: messages.map((m) => ({ role: m.role, content: m.content })),
+      },
+      {
+        onSuccess: (data) => {
+          setMessages((prev) => [...prev, { role: "assistant", content: data.response }]);
+          setIsTyping(false);
+        },
+        onError: (err) => {
+          setMessages((prev) => [
+            ...prev,
+            { role: "assistant", content: `Sorry, I couldn't process that request. ${err.message}` },
+          ]);
+          setIsTyping(false);
+        },
+      }
+    );
   };
 
   return (
@@ -98,7 +118,7 @@ export default function AmigoPanel({ onClose }: Props) {
       {/* Suggestion chips */}
       {messages.length === 0 && (
         <div className="px-3 pb-2 flex flex-wrap gap-1.5">
-          {amigoSuggestions.map((s) => (
+          {suggestions.map((s) => (
             <button
               key={s}
               onClick={() => handleSend(s)}

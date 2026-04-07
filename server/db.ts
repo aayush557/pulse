@@ -1,7 +1,5 @@
+import "./env.js"; // Ensure .env is loaded before reading PG* vars
 import pg from "pg";
-import dotenv from "dotenv";
-
-dotenv.config();
 
 export const pool = new pg.Pool({
   host: process.env.PGHOST,

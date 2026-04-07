@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Mail, Clock, Calendar, Save, Bell, Sparkles } from "lucide-react";
 import { toast } from "sonner";
-import { aiThresholdRecommendations } from "@/data/mlData";
+import { useSettingsRecommendations, useSubscriptions, useUpdateSubscriptions } from "@/hooks/useDashboardData";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface ToggleSetting {
   id: string;
@@ -14,6 +15,16 @@ interface ToggleSetting {
 }
 
 export default function PulseSettingsView() {
+  const { data: recsData } = useSettingsRecommendations();
+  const { data: subsData } = useSubscriptions();
+  const updateSubs = useUpdateSubscriptions();
+  const queryClient = useQueryClient();
+
+  const getRecommendation = (settingId: string) => {
+    if (!recsData?.recommendations) return null;
+    return recsData.recommendations.find((r) => r.settingId === settingId);
+  };
+
   const [settings, setSettings] = useState<ToggleSetting[]>([
     { id: "batch_holds", title: "Batch holds", description: "Alert when a merchant batch is placed under funding review", enabled: true, badge: "mvp", config: { label: "Min. hold amount", value: "5000", suffix: "$" } },
     { id: "payout_failures", title: "Payout failures", description: "Alert when a payout or ACH return reaches a failed or returned status", enabled: true, badge: "mvp" },
@@ -23,12 +34,44 @@ export default function PulseSettingsView() {
     { id: "decline_rate", title: "Decline rate anomaly", description: "Alert when a merchant's decline rate crosses your threshold", enabled: false, badge: "soon", config: { label: "Threshold", value: "20", suffix: "%" } },
   ]);
 
+  // Sync toggle state from server when subscription data loads
+  useEffect(() => {
+    if (subsData) {
+      setSettings((prev) =>
+        prev.map((s) => {
+          const serverVal = subsData[s.id as keyof typeof subsData];
+          return typeof serverVal === "boolean" ? { ...s, enabled: serverVal } : s;
+        })
+      );
+    }
+  }, [subsData]);
+
   const [recipients, setRecipients] = useState("ops@payabli.com, aayush@payabli.com");
   const [quietHours, setQuietHours] = useState(true);
   const [weeklyDigest, setWeeklyDigest] = useState(false);
 
   const toggleSetting = (id: string) => {
-    setSettings((prev) => prev.map((s) => s.id === id && s.badge !== "soon" ? { ...s, enabled: !s.enabled } : s));
+    if (settings.find((s) => s.id === id)?.badge === "soon") return;
+
+    setSettings((prev) => prev.map((s) => s.id === id ? { ...s, enabled: !s.enabled } : s));
+
+    const current = settings.find((s) => s.id === id);
+    if (current) {
+      updateSubs.mutate(
+        { [id]: !current.enabled },
+        {
+          onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+            toast.success("Settings saved");
+          },
+          onError: () => {
+            // Revert on failure
+            setSettings((prev) => prev.map((s) => s.id === id ? { ...s, enabled: current.enabled } : s));
+            toast.error("Failed to save setting");
+          },
+        }
+      );
+    }
   };
 
   const updateConfig = (id: string, value: string) => {
@@ -41,7 +84,17 @@ export default function PulseSettingsView() {
   };
 
   const handleSave = () => {
-    toast.success("Pulse settings saved successfully");
+    const payload: Record<string, boolean> = {};
+    settings.forEach((s) => { payload[s.id] = s.enabled; });
+    updateSubs.mutate(payload, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["subscriptions"] });
+        toast.success("Pulse settings saved successfully");
+      },
+      onError: () => {
+        toast.error("Failed to save settings");
+      },
+    });
   };
 
   return (
@@ -56,7 +109,7 @@ export default function PulseSettingsView() {
           <p className="text-[11px] text-muted-foreground mt-0.5">Configure which portfolio events Pulse monitors.</p>
         </div>
         {settings.map((s) => {
-          const aiRec = aiThresholdRecommendations.find((r) => r.settingId === s.id);
+          const aiRec = getRecommendation(s.id);
           return (
             <div key={s.id} className="flex items-start gap-3 px-3 py-2.5 border-b border-border/20 last:border-b-0">
               <div className="flex-1">

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import {
   LayoutDashboard, Settings, Activity,
-  Zap, ChevronDown, ChevronRight, Wifi
+  Zap, ChevronDown, ChevronRight, Wifi, Sparkles
 } from "lucide-react";
 
 interface NavItem {
@@ -23,7 +23,8 @@ const navSections: { title: string; isPulse?: boolean; items: NavItem[] }[] = [
     title: "Intelligence",
     isPulse: true,
     items: [
-      { label: "Pulse center", icon: Activity, path: "pulse", badge: 3 },
+      { label: "Amigo Intelligence", icon: Sparkles, path: "intelligence" },
+      { label: "Pulse center", icon: Activity, path: "pulse" },
       { label: "Notifications", icon: Wifi, path: "notification-failures" },
       { label: "Pulse settings", icon: Settings, path: "pulse-settings" },
     ],
@@ -33,9 +34,10 @@ const navSections: { title: string; isPulse?: boolean; items: NavItem[] }[] = [
 interface AppSidebarProps {
   activeView: string;
   onNavigate: (view: string) => void;
+  alertCount?: number;
 }
 
-export default function AppSidebar({ activeView, onNavigate }: AppSidebarProps) {
+export default function AppSidebar({ activeView, onNavigate, alertCount }: AppSidebarProps) {
   const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
   const toggleGroup = (label: string) => {
@@ -99,7 +101,12 @@ export default function AppSidebar({ activeView, onNavigate }: AppSidebarProps) 
                 >
                   <item.icon className="w-3.5 h-3.5 flex-shrink-0" />
                   <span>{item.label}</span>
-                  {item.badge && (
+                  {item.path === "pulse" && (alertCount ?? 0) > 0 && (
+                    <span className="ml-auto bg-payabli-cyan text-primary-foreground text-[9px] px-1.5 py-0.5 rounded-full font-semibold">
+                      {alertCount}
+                    </span>
+                  )}
+                  {item.badge && item.path !== "pulse" && (
                     <span className="ml-auto bg-payabli-cyan text-primary-foreground text-[9px] px-1.5 py-0.5 rounded-full font-semibold">
                       {item.badge}
                     </span>

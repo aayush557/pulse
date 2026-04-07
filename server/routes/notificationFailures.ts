@@ -330,21 +330,34 @@ Return ONLY a JSON array, no other text.`,
   }>;
 
   try {
-    // Handle potential markdown code blocks in response
-    const jsonStr = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-    analyses = JSON.parse(jsonStr);
+    // Try direct parse first
+    analyses = JSON.parse(text);
   } catch {
-    console.error("Failed to parse Claude response:", text.slice(0, 500));
-    // Fallback: generate basic analysis without AI
-    analyses = groups.map((g) => ({
-      id: g.id,
-      summary: `${g.failureLabel} failures hitting ${g.endpointHost} (${g.failCount} failures).`,
-      rootCause: `Endpoint returning HTTP ${g.statusCode}. ${g.errorSamples[0]?.slice(0, 100) || "No error detail."}`,
-      impact: `Affecting ${g.affectedPaypoints} paypoints across ${g.orgs.map((o) => o.name).join(", ")}.`,
-      ticketTitle: `[Webhook] ${g.failureLabel}: ${g.endpointHost} — ${g.failCount} failures`,
-      ticketBody: `**Endpoint:** ${g.endpoint}\n**Failures:** ${g.failCount}\n**Period:** ${new Date(g.firstFailure).toLocaleDateString()} – ${new Date(g.lastFailure).toLocaleDateString()}\n**Orgs:** ${g.orgs.map((o) => o.name).join(", ")}\n**Error:** ${g.errorSamples[0]?.slice(0, 200) || "N/A"}`,
-      priority: g.isOngoing && g.failCount > 1000 ? "critical" : g.isOngoing ? "high" : "medium",
-    }));
+    try {
+      // Remove markdown code fences
+      let jsonStr = text.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
+
+      // Extract JSON array - find the first [ and last ]
+      const startIdx = jsonStr.indexOf("[");
+      const endIdx = jsonStr.lastIndexOf("]");
+      if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+        jsonStr = jsonStr.substring(startIdx, endIdx + 1);
+      }
+
+      analyses = JSON.parse(jsonStr);
+    } catch {
+      console.error("Failed to parse Claude response:", text.slice(0, 500));
+      // Fallback: generate basic analysis without AI
+      analyses = groups.map((g) => ({
+        id: g.id,
+        summary: `${g.failureLabel} failures hitting ${g.endpointHost} (${g.failCount} failures).`,
+        rootCause: `Endpoint returning HTTP ${g.statusCode}. ${g.errorSamples[0]?.slice(0, 100) || "No error detail."}`,
+        impact: `Affecting ${g.affectedPaypoints} paypoints across ${g.orgs.map((o) => o.name).join(", ")}.`,
+        ticketTitle: `[Webhook] ${g.failureLabel}: ${g.endpointHost} — ${g.failCount} failures`,
+        ticketBody: `**Endpoint:** ${g.endpoint}\n**Failures:** ${g.failCount}\n**Period:** ${new Date(g.firstFailure).toLocaleDateString()} – ${new Date(g.lastFailure).toLocaleDateString()}\n**Orgs:** ${g.orgs.map((o) => o.name).join(", ")}\n**Error:** ${g.errorSamples[0]?.slice(0, 200) || "N/A"}`,
+        priority: g.isOngoing && g.failCount > 1000 ? "critical" : g.isOngoing ? "high" : "medium",
+      }));
+    }
   }
 
   // Merge AI analysis back onto groups
