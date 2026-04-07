@@ -1,0 +1,13 @@
+/Users/leonelnorat/sources/pulse/modules/pulse-subscriptions/bin/Debug/net8.0/PulseSubscriptions.deps.json
+/Users/leonelnorat/sources/pulse/modules/pulse-subscriptions/bin/Debug/net8.0/PulseSubscriptions.dll
+/Users/leonelnorat/sources/pulse/modules/pulse-subscriptions/bin/Debug/net8.0/PulseSubscriptions.pdb
+/Users/leonelnorat/sources/pulse/modules/pulse-subscriptions/obj/Debug/net8.0/pulse-subscriptions.csproj.AssemblyReference.cache
+/Users/leonelnorat/sources/pulse/modules/pulse-subscriptions/obj/Debug/net8.0/pulse-subscriptions.GeneratedMSBuildEditorConfig.editorconfig
+/Users/leonelnorat/sources/pulse/modules/pulse-subscriptions/obj/Debug/net8.0/pulse-subscriptions.AssemblyInfoInputs.cache
+/Users/leonelnorat/sources/pulse/modules/pulse-subscriptions/obj/Debug/net8.0/pulse-subscriptions.AssemblyInfo.cs
+/Users/leonelnorat/sources/pulse/modules/pulse-subscriptions/obj/Debug/net8.0/pulse-subscriptions.csproj.CoreCompileInputs.cache
+/Users/leonelnorat/sources/pulse/modules/pulse-subscriptions/obj/Debug/net8.0/PulseSubscriptions.dll
+/Users/leonelnorat/sources/pulse/modules/pulse-subscriptions/obj/Debug/net8.0/refint/PulseSubscriptions.dll
+/Users/leonelnorat/sources/pulse/modules/pulse-subscriptions/obj/Debug/net8.0/PulseSubscriptions.pdb
+/Users/leonelnorat/sources/pulse/modules/pulse-subscriptions/obj/Debug/net8.0/ref/PulseSubscriptions.dll
+/Users/leonelnorat/sources/pulse/modules/pulse-subscriptions/obj/Debug/net8.0/pulse-subscriptions.sourcelink.json

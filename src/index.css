@@ -1,0 +1,114 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+@layer base {
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    --primary: 213 94% 56%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 213 94% 56%;
+
+    --radius: 0.5rem;
+
+    /* Payabli brand tokens */
+    --payabli-cyan: 199 89% 48%;
+    --payabli-cyan-light: 199 89% 95%;
+    --payabli-blue: 217 91% 60%;
+    --payabli-slate: 222 47% 11%;
+    --payabli-slate-light: 215 20% 65%;
+
+    /* Status tokens */
+    --status-success: 142 71% 45%;
+    --status-success-bg: 138 76% 97%;
+    --status-success-border: 142 69% 58%;
+    --status-success-text: 144 61% 20%;
+
+    --status-warning: 38 92% 50%;
+    --status-warning-bg: 48 96% 89%;
+    --status-warning-border: 48 96% 78%;
+    --status-warning-text: 32 95% 44%;
+
+    --status-danger: 0 84% 60%;
+    --status-danger-bg: 0 86% 97%;
+    --status-danger-border: 0 91% 71%;
+    --status-danger-text: 0 74% 42%;
+
+    --status-info: 199 89% 48%;
+    --status-info-bg: 204 94% 94%;
+    --status-info-border: 199 89% 70%;
+    --status-info-text: 201 96% 32%;
+
+    --status-purple: 263 70% 50%;
+    --status-purple-bg: 263 87% 97%;
+    --status-purple-text: 263 70% 14%;
+
+    /* AI/ML accent tokens */
+    --ai-accent: 263 70% 30%;
+    --ai-accent-bg: 263 80% 98%;
+    --ai-accent-border: 263 60% 87%;
+    --ai-accent-text: 263 70% 14%;
+
+    /* Watch / Predictive (indigo) */
+    --status-watch: 239 84% 67%;
+    --status-watch-bg: 239 100% 97%;
+    --status-watch-border: 239 80% 80%;
+    --status-watch-text: 239 84% 30%;
+
+    /* Resolution insight (light blue) */
+    --insight-bg: 204 100% 97%;
+    --insight-border: 199 89% 74%;
+    --insight-text: 201 96% 32%;
+
+    /* Sidebar */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 215 16% 47%;
+    --sidebar-primary: 213 94% 56%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 213 94% 97%;
+    --sidebar-accent-foreground: 213 94% 56%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 213 94% 56%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+}
+
+@layer utilities {
+  .payabli-gradient {
+    background: linear-gradient(135deg, hsl(var(--payabli-cyan)), hsl(var(--payabli-blue)));
+  }
+}

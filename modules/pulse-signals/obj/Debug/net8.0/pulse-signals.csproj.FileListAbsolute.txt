@@ -1,0 +1,13 @@
+/Users/leonelnorat/sources/pulse/modules/pulse-signals/bin/Debug/net8.0/PulseSignals.deps.json
+/Users/leonelnorat/sources/pulse/modules/pulse-signals/bin/Debug/net8.0/PulseSignals.dll
+/Users/leonelnorat/sources/pulse/modules/pulse-signals/bin/Debug/net8.0/PulseSignals.pdb
+/Users/leonelnorat/sources/pulse/modules/pulse-signals/obj/Debug/net8.0/pulse-signals.csproj.AssemblyReference.cache
+/Users/leonelnorat/sources/pulse/modules/pulse-signals/obj/Debug/net8.0/pulse-signals.GeneratedMSBuildEditorConfig.editorconfig
+/Users/leonelnorat/sources/pulse/modules/pulse-signals/obj/Debug/net8.0/pulse-signals.AssemblyInfoInputs.cache
+/Users/leonelnorat/sources/pulse/modules/pulse-signals/obj/Debug/net8.0/pulse-signals.AssemblyInfo.cs
+/Users/leonelnorat/sources/pulse/modules/pulse-signals/obj/Debug/net8.0/pulse-signals.csproj.CoreCompileInputs.cache
+/Users/leonelnorat/sources/pulse/modules/pulse-signals/obj/Debug/net8.0/PulseSignals.dll
+/Users/leonelnorat/sources/pulse/modules/pulse-signals/obj/Debug/net8.0/refint/PulseSignals.dll
+/Users/leonelnorat/sources/pulse/modules/pulse-signals/obj/Debug/net8.0/PulseSignals.pdb
+/Users/leonelnorat/sources/pulse/modules/pulse-signals/obj/Debug/net8.0/ref/PulseSignals.dll
+/Users/leonelnorat/sources/pulse/modules/pulse-signals/obj/Debug/net8.0/pulse-signals.sourcelink.json

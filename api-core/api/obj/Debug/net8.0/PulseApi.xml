@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>PulseApi</name>
+    </assembly>
+    <members>
+        <member name="M:PulseApi.Controllers.PulseSignalsController.GetAll(System.Nullable{System.Int64},System.Nullable{System.Int64},System.String,System.Threading.CancellationToken)">
+            <summary>Returns all pulse signals, with optional filtering.</summary>
+        </member>
+        <member name="M:PulseApi.Controllers.PulseSignalsController.GetById(System.Int32,System.Threading.CancellationToken)">
+            <summary>Returns a single pulse signal by id.</summary>
+        </member>
+        <member name="M:PulseApi.Controllers.PulseSubscriptionsController.GetAll(System.Threading.CancellationToken)">
+            <summary>Returns all pulse subscriptions.</summary>
+        </member>
+        <member name="M:PulseApi.Controllers.PulseSubscriptionsController.GetById(System.Int32,System.Threading.CancellationToken)">
+            <summary>Returns a single pulse subscription by id.</summary>
+        </member>
+        <member name="M:PulseApi.Controllers.PulseSubscriptionsController.Create(PulseApi.Models.CreatePulseSubscriptionRequest,System.Threading.CancellationToken)">
+            <summary>Creates a new pulse subscription.</summary>
+        </member>
+        <member name="M:PulseApi.Controllers.PulseSubscriptionsController.Update(System.Int32,PulseApi.Models.UpdatePulseSubscriptionRequest,System.Threading.CancellationToken)">
+            <summary>Fully updates an existing pulse subscription.</summary>
+        </member>
+        <member name="M:PulseApi.Controllers.PulseSubscriptionsController.Delete(System.Int32,System.Threading.CancellationToken)">
+            <summary>Deletes a pulse subscription by id.</summary>
+        </member>
+    </members>
+</doc>
